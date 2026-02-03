@@ -2,8 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
+	"os"
 	"strings"
 )
+
+// ----------------- Helper functions -----------------
 
 func getBannerMapping(scanner *bufio.Scanner) map[rune][]string {
 	i := 0
@@ -12,11 +16,9 @@ func getBannerMapping(scanner *bufio.Scanner) map[rune][]string {
 		' ': {},
 	}
 
-	// Iterate over the scanner to read line by line
 	for scanner.Scan() {
-		// Get the current line as a string (newline termination is stripped by default)
 		line := scanner.Text()
-		if len(line) == 0 { // If line is empty ignore it
+		if len(line) == 0 {
 			continue
 		}
 
@@ -30,31 +32,27 @@ func getBannerMapping(scanner *bufio.Scanner) map[rune][]string {
 		if len(line) > 0 {
 			i++
 		}
-
 	}
 
 	return bannerMap
 }
 
-// Returns a string containing the 8 layers of a string that can then be printed to output
 func getAsciiLine(s string, bannerMap map[rune][]string) string {
 	var lineRes strings.Builder
-	for i := 0; i < 8; i++ { // Loop 8 times
+	for i := 0; i < 8; i++ {
 		for _, r := range s {
 			group, exists := bannerMap[r]
 			if exists {
 				lineRes.WriteString(group[i])
 			}
 		}
-		if i != 7 { // Only
+		if i != 7 {
 			lineRes.WriteString("\n")
 		}
 	}
-
 	return lineRes.String()
 }
 
-// For each string in sSlice, its expected representation in ascii is obtained & appended to a result string & then returned
 func getResultAscii(sSlice []string, bannerMap map[rune][]string) string {
 	var resStr strings.Builder
 	for _, s := range sSlice {
@@ -66,11 +64,9 @@ func getResultAscii(sSlice []string, bannerMap map[rune][]string) string {
 		resStr.WriteString(getAsciiLine(s, bannerMap))
 	}
 	resStr.WriteString("\n")
-
 	return resStr.String()
 }
 
-// Split input using \n but still retain the \n
 func splitStrByNewLines(s string) []string {
 	var tokens []string
 	current := ""
@@ -92,4 +88,32 @@ func splitStrByNewLines(s string) []string {
 	}
 
 	return tokens
+}
+
+// ----------------- New RenderAscii function -----------------
+
+// RenderAscii renders the input string using the given banner file.
+// Returns the ASCII art as a string or an error if something goes wrong.
+func RenderAscii(input string, bannerFile string) (string, error) {
+	// 1. Open banner file
+	file, err := os.Open(bannerFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to open banner file: %w", err)
+	}
+	defer file.Close()
+
+	// 2. Build banner mapping
+	scanner := bufio.NewScanner(file)
+	bannerMap := getBannerMapping(scanner)
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("scanner error: %w", err)
+	}
+
+	// 3. Split input by \n but retain newlines
+	sSlice := splitStrByNewLines(input)
+
+	// 4. Generate ASCII
+	resStr := getResultAscii(sSlice, bannerMap)
+
+	return resStr, nil
 }
